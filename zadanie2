@@ -1,0 +1,206 @@
+
+/**
+ * Klasa abstrakcyjna zawierająca metody oraz zmienne abstrakcyjne
+ */
+abstract class AbstractSequence {
+    abstract val identifier: String //Zmienna abstrakcyjna bez implementacji
+    abstract var data: String //Zmienna abstrakcyjna bez implementacji
+    /**
+     * Zbiór dozwolonych znaków.
+     */
+    open val validChars: Set<Char> = setOf()
+    /**
+     * Długość sekwencji.
+     */
+    open val length: Int
+        get() = data.length
+    /**
+     * Funkcja zwracająca reprezentację tekstową w formacie FASTA.
+     */
+    override fun toString(): String {
+        return ">$identifier\n$data"
+    }
+    /**
+     * Funkcja zmieniająca zasadę azotową na danej pozycji.
+     * @param position Pozycja na której chcemy zmienić zasadę.
+     * @param value Nowy znak.
+     * @throws IllegalArgumentException Gdy pozycja jest poza zakresem lub znak jest niedozwolony.
+     */
+    open fun mutate(position: Int, value: Char) { // metoda do nadpisania
+        require(position in data.indices) { "Wpisana pozycja jest poza zakresem." }
+        require(value in validChars) { "Nieprawidłowa zasada: $value." }
+
+        data = data.substring(0, position) + value + data.substring(position + 1)
+    }
+    /**
+     * Funkcja która znajduje pierwszy wystąpienie motywu w sekwencji.
+     * @param motif szukany element.
+     * @return Indeks szukanego elementu.
+     */
+    open fun findMotif(motif: String): Int {
+        return data.indexOf(motif)
+    }
+}
+
+/**
+ * Klasa reprezentująca sekwencję DNA.
+ * @param identifier Unikalny identyfikator sekwencji.
+ * @param data Dane sekwencji DNA.
+ */
+class DNASequence(
+    override val identifier: String,
+    override var data: String
+) : AbstractSequence() {
+
+    override val validChars = setOf('A', 'T', 'C', 'G') // lista dozwolonych zasad azotowych
+    /**
+     * Funkcja zwracająca komplementarną sekwencję DNA.
+     * @return Komplementarna nić DNA.
+     */
+    fun complement(): String {
+        return data.map {
+            when (it) {
+                'A' -> 'T'
+                'T' -> 'A'
+                'C' -> 'G'
+                'G' -> 'C'
+                else -> it
+            }
+        }.joinToString("")
+    }
+    /**
+     * Funkcja która transkrybuje sekwencję do RNA.
+     * @return RNASequence sekwencja RNA.
+     */
+    fun transcribe(): RNASequence {
+        val rna = data.replace('T', 'U')
+        val rnaData = rna.reversed()
+        return RNASequence(identifier, rnaData)
+    }
+}
+
+/**
+ * Klasa reprezentująca sekwencję RNA.
+ * @param identifier Unikalny identyfikator sekwencji.
+ * @param data sekwencja RNA.
+ */
+class RNASequence(
+    override val identifier: String,
+    override var data: String
+) : AbstractSequence() {
+
+    override val validChars = setOf('A', 'U', 'C', 'G')
+    /**
+     * Funkcja transkrybująca sekwencję RNA do białka.
+     * @return Obiekt ProteinSequence  sekwencja białkowa.
+     */
+    fun transcribeToProtein(): ProteinSequence {
+        val aminokwasy = data
+            .chunked(3) //https://www.baeldung.com/kotlin/string-chunking
+            .dropWhile { it != "AUG" }
+            .map { kodon ->
+                when (kodon) {
+                    "AUG" -> "Metionina"
+                    "UUU", "UUC" -> "Fenyloalanina"
+                    "UUA", "UUG", "CUU", "CUC", "CUA", "CUG" -> "Leucyna"
+                    "AUU", "AUC", "AUA" -> "Izoleucyna"
+                    "GUU", "GUC", "GUA", "GUG" -> "Walina"
+                    "CCU", "CCC", "CCA", "CCG" -> "Prolina"
+                    "ACU", "ACC", "ACA", "ACG" -> "Treonina"
+                    "GCU", "GCC", "GCA", "GCG" -> "Alanina"
+                    "CAU", "CAC" -> "Histydyna"
+                    "CAA", "CAG" -> "Glutamina"
+                    "AAU", "AAC" -> "Asparagina"
+                    "AAA", "AAG" -> "Lizyna"
+                    "GAU", "GAC" -> "Asparginian"
+                    "GAA", "GAG" -> "Glutaminian"
+                    "CGU", "CGC", "CGA", "CGG" -> "Arginina"
+                    "AGU", "AGC" -> "Seryna"
+                    "AGA", "AGG" -> "Arginina"
+                    "GGU", "GGC", "GGA", "GGG" -> "Glicyna"
+                    "UAU", "UAC" -> "Tyrozyna"
+                    "UGU", "UGC" -> "Cysteina"
+                    "UGG" -> "Tryptofan"
+                    "UAA", "UAG", "UGA" -> "Stop"
+                    else -> "Nieznany"
+                }
+            }
+            .takeWhile { it != "Stop" }         // przerywa przy kodonie stop
+            .joinToString("-")
+
+        return ProteinSequence(identifier, aminokwasy)
+    }
+}
+
+/**
+ * Klasa reprezentująca sekwencję białkową.
+ *
+ * @param identifier Unikalny identyfikator białek.
+ * @param data Dane sekwencji białkowej
+ * */
+    class ProteinSequence(
+    override val identifier: String,
+    override var data: String
+) : AbstractSequence() {
+
+    companion object {
+        val VALID_AMINO_ACIDS = setOf(
+            "Metionina", "Fenyloalanina", "Leucyna", "Izoleucyna", "Walina",
+            "Prolina", "Treonina", "Alanina", "Histydyna", "Glutamina",
+            "Asparagina", "Lizyna", "Asparginian", "Glutaminian", "Arginina",
+            "Seryna", "Tyrozyna", "Cysteina", "Tryptofan", "Glicyna"
+        )
+    }
+    override val length: Int
+            get() = data.split("-").size
+        // Liczymy aminokwasy, które są oddzielone myślnikami
+
+//https://www.dhiwise.com/post/kotlin-unsupportedoperationexception-causes-and-fixes
+    override fun mutate(position: Int, value: Char) {
+        throw UnsupportedOperationException("Dla sekwencji białkowej użyj mutate z String.")
+    }
+    fun mutate(position: Int, value: String) {
+        val aminokwasy = data.split("-").toMutableList()
+        require(position in aminokwasy.indices) {  "Wpisana pozycja jest poza zakresem." }
+        require(value in VALID_AMINO_ACIDS) { "Nieprawidłowy aminokwas." }
+
+        aminokwasy[position] = value
+        data = aminokwasy.joinToString("-")
+    }
+
+    override fun findMotif(motif: String): Int {
+        return data.split("-").indexOf(motif)
+    }
+}
+
+fun main() {
+    val dna = DNASequence("id1", "ATGC")
+    require(dna.length == 4){"Niepoprawna długość sekwencji dla DNASequence"}
+    require(dna.toString() == ">id1\nATGC"){"Niepoprawna reprezentacja w formacie FASTA dla DNASequence"}
+    dna.mutate(2, 'T')//data to pole przechowujące faktyczną sekwencję DNA
+    require(dna.data == "ATTC"){"Niepoprawna mutacja sekwencji dla DNASequence"}
+    require(dna.findMotif("TT") == 1){"Niepoprawna pozycja dla DNASequence"}
+    require(dna.complement() == "TAAG"){"Niepoprawna nić komplementarna dla DNASequence"}
+    val rna2 = dna.transcribe()
+    require(rna2.data == "CUUA"){"Niepoprawna transkrypcja dla DNASequence"}
+
+    val rna = RNASequence("rna1", "UUUAUGUUU")
+    require(rna.length == 9){"Niepoprawna długość sekwencji dla RNASequence"}
+    require(rna.toString() == ">rna1\nUUUAUGUUU"){"Niepoprawna reprezentacja w formacie FASTA dla RNASequence"}
+    rna.mutate(1, 'C')
+    require(rna.data == "UCUAUGUUU"){"Niepoprawna mutacja sekwencji dla RNASequence"}
+    require(rna.findMotif("UCU") == 0){"Niepoprawna pozycja dla RNASequence"}
+    val protein = rna.transcribeToProtein()
+    require(protein.data == "Metionina-Fenyloalanina") {
+        "Niepoprawna transkrypcja dla RNASequence"
+    }
+
+    val bialko = ProteinSequence("prot1", "Metionina-Fenyloalanina-Leucyna")
+    require(bialko.length == 3){"Niepoprawna długość sekwencji dla ProteinSequence"}
+    require(bialko.toString() == ">prot1\nMetionina-Fenyloalanina-Leucyna"){"Niepoprawna reprezentacja w formacie FASTA dla ProteinSequence"}
+    bialko.mutate(1, "Alanina")
+    require(bialko.data == "Metionina-Alanina-Leucyna"){"Niepoprawna mutacja aminokwasów dla ProteinSequence"}
+    require(bialko.findMotif("Leucyna") == 2){"Niepoprawna pozycja dla ProteinSequence"}
+
+}
+
