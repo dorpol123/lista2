@@ -155,19 +155,11 @@ class RNASequence(
             get() = data.split("-").size
         // Liczymy aminokwasy, które są oddzielone myślnikami
 
-//https://www.dhiwise.com/post/kotlin-unsupportedoperationexception-causes-and-fixes
-    override fun mutate(position: Int, value: Char) {
-        throw UnsupportedOperationException("Dla sekwencji białkowej użyj mutate z String.")
-    }
-    fun mutate(position: Int, value: String) {
+ fun mutate(position: Int, value: String) {
         val aminokwasy = data.split("-").toMutableList()
-        require(position in aminokwasy.indices) {  "Wpisana pozycja jest poza zakresem." }
-        require(value in VALID_AMINO_ACIDS) { "Nieprawidłowy aminokwas." }
-
         aminokwasy[position] = value
         data = aminokwasy.joinToString("-")
     }
-
     override fun findMotif(motif: String): Int {
         return data.split("-").indexOf(motif)
     }
