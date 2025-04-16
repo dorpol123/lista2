@@ -1,0 +1,200 @@
+/**
+ * Klasa reprezentująca wielomian dowolnego stopnia.
+ *
+ * @param współczynniki Lista współczynników wielomianu
+ */
+class Wielomian(współczynnik: List<Double>) {
+    private val współczynniki: List<Double> = współczynnik.reversed()
+    init {
+            require(współczynniki.isNotEmpty()) { "Podaj współczynniki wielomianu." }
+    }
+    /**
+     * Zwraca stopień wielomianu.
+     * @return Stopień wielomianu. Zwraca 0, jeśli wszystkie współczynniki są zerowe.
+     */
+    fun stopien(): Int {
+        val zera = współczynniki.filter { it != 0.0 }
+        return if (zera.isEmpty()) 0
+        else zera.size - 1
+    }
+    /**
+     * Zwraca tekstową reprezentację wielomianu.
+     * @return Reprezentacja tekstowa wielomianu.
+     */
+    override fun toString(): String {
+        val terms = współczynniki.mapIndexed { index, współ ->
+            if (współ == 0.0) "" else {
+                when (index) {
+                    0 -> "$współ"
+                    1 -> "${współ}x"
+                    else -> "${współ}x^$index"
+                }
+            }
+        }.filter { it.isNotEmpty() }
+
+        return if (terms.isEmpty()) {
+            "W(x) = 0"
+        } else {
+            "W(x) = ${terms.reversed().joinToString(" + ")}"
+        }
+    }
+    /**
+     * Operator wywołania, który oblicza wartość wielomianu dla danej wartości x.
+     * @param x Wartość, dla której obliczamy wartość wielomianu.
+     * @return Wartość wielomianu W(x).
+     */
+
+    //https://www.baeldung.com/cs/collections-fold-left-right
+    operator fun invoke(x: Double): Double {
+        return współczynniki.foldRight(0.0) { współ, acc -> acc * x + współ }
+    }
+    /**
+     * Funkcja, która oblicza sumę dwóch wielomianów.
+     * @param inny drugi wielomian
+     * @return Suma wielomianów.
+     */
+    //https://github.com/crotwell/OregonDSP-kotlin/blob/master/src/main/kotlin/com/oregondsp/signalProcessing/filter/Polynomial.kt
+
+    fun dodawanie(inny: Wielomian): Wielomian {
+        val dlugosc = maxOf(this.współczynniki.size, inny.współczynniki.size)
+        val nowe = MutableList(dlugosc) { 0.0 }
+
+        for (i in współczynniki.indices) nowe[i] += współczynniki[i]
+        for (i in inny.współczynniki.indices) nowe[i] += inny.współczynniki[i]
+
+        return Wielomian(nowe.reversed())
+    }
+    /**
+     * Funkcja, która oblicza różnicę dwóch wielomianów.
+     * @param inny drugi wielomian
+     * @return Różnica wielomianów.
+     */
+    //funkcja odejmowanie zawiera schemat rozwiązania z metody dodawanie z podanego źródła
+    fun odejmowanie(inny: Wielomian): Wielomian {
+        val dlugosc = maxOf(this.współczynniki.size, inny.współczynniki.size)
+        val nowe = MutableList(dlugosc) { 0.0 }
+
+        for (i in współczynniki.indices) nowe[i] += współczynniki[i]
+        for (i in inny.współczynniki.indices) nowe[i] -= inny.współczynniki[i]
+
+        return Wielomian(nowe.reversed())
+    }
+    /**
+     * Funkcja, która oblicza iloczyn dwóch wielomianów.
+     * @param inny drugi wielomian
+     * @return Iloczyn wielomianów.
+     */
+    fun mnozenie(inny: Wielomian): Wielomian {
+        val resultSize = this.współczynniki.size + inny.współczynniki.size - 1
+        val result = MutableList(resultSize) { 0.0 }
+
+        for (i in this.współczynniki.indices) {
+            for (j in inny.współczynniki.indices) {
+                result[i + j] += this.współczynniki[i] * inny.współczynniki[j]
+            }
+        }
+
+        return Wielomian(result.reversed())
+    }
+
+    /**
+     * Operator plus któy dodaje dwa wielomiany.
+     *
+     * @param inny Drugi wielomian do dodania.
+     * @return wielomian będący sumą bieżącego i innego wielomianu.
+     */
+    operator fun plus(inny: Wielomian) = this.dodawanie(inny)
+
+    /**
+     * PlusEquals dodaje drugi wielomian do bieżącego
+     *
+     * @param inny Wielomian do dodania.
+     * @return Nowy wielomian.
+     */
+    fun plusEquals(inny: Wielomian) = this + inny
+
+    /**
+     * Operator minus odejmuje dwa wielomiany.
+     *
+     * @param inny wielomian do odjęcia.
+     * @return Nowy wielomian będący różnicą bieżącego i innego wielomianu.
+     */
+    operator fun minus(inny: Wielomian) = this.odejmowanie(inny)
+
+    /**
+     * Operator minusEquals odejmuje inny wielomian od bieżącego
+     *
+     * @param inny Wielomian do odjęcia.
+     * @return Nowy wielomian.
+     */
+    fun minusEquals(inny: Wielomian) = this - inny
+
+    /**
+     * Operator times mnoży dwa wielomiany
+     *
+     * @param inny wielomian do pomnożenia.
+     * @return Nowy wielomian będący iloczynem bieżącego i innego wielomianu.
+     */
+    operator fun times(inny: Wielomian) = this.mnozenie(inny)
+
+    /**
+     * Mnoży bieżący wielomian przez inny
+     *
+     * @param inny Wielomian do pomnożenia.
+     * @return Wynik mnożenia jako nowy wielomian.
+     */
+    fun timesEquals(inny: Wielomian) = this * inny
+
+}
+
+fun testWielomian() {
+    val w1 = Wielomian(listOf(4.0, 3.0, 2.0))
+    val w2 = Wielomian(listOf(1.0, 2.0))
+    val w3 = Wielomian(listOf(0.0, 0.0, 0.0))
+
+    require(w1.toString() == "W(x) = 4.0x^2 + 3.0x + 2.0") { "Nieprawidłowa reprezentacja tekstowa dla w1" }
+    require(w2.toString() == "W(x) = 1.0x + 2.0") { "Nieprawidłowa reprezentacja tekstowa dla w2" }
+    require(w3.toString() == "W(x) = 0") { "Nieprawidłowa reprezentacja tekstowa dla w3" }
+
+    require(w1.stopien() == 2) { "Nieprawidłowy stopień dla w1" }
+    require(w2.stopien() == 1) { "Nieprawidłowy stopień dla w2" }
+    require(w3.stopien() == 0) { "Nieprawidłowy stopień dla w3" }
+
+    require(w1(2.0) == 24.0) { "Nieprawidłowa wartość dla w1" }
+    require(w2(2.0) == 4.0) { "Nieprawidłowa wartość dla w2" }
+    require(w3(1.0) == 0.0) { "Nieprawidłowa wartość dla w3" }
+
+    val suma1 = w1.dodawanie(w3)
+    require(suma1.toString() == "W(x) = 4.0x^2 + 3.0x + 2.0") { "Nieprawidłowa suma w1 i w2" }
+    val suma2 = w2.dodawanie(w3)
+    require(suma2.toString() == "W(x) = 1.0x + 2.0") { "Nieprawidłowa suma w3 i w2" }
+    val suma3 = w2.dodawanie(w1)
+    require(suma3.toString() == "W(x) = 4.0x^2 + 4.0x + 4.0") { "Nieprawidłowa suma w3 i w1" }
+
+    val roznica1 = w1.odejmowanie(w2)
+    require(roznica1.toString() == "W(x) = 4.0x^2 + 2.0x") { "Nieprawidłowa różnica w1 i w2" }
+    val roznica2 = w1.odejmowanie(w3)
+    require(roznica2.toString() == "W(x) = 4.0x^2 + 3.0x + 2.0") { "Nieprawidłowa różnica w1 i w3" }
+    val roznica3 = w2.odejmowanie(w1)
+
+    val iloczyn1 = w1.mnozenie(w3)
+    require(iloczyn1.toString() == "W(x) = 0") { "Nieprawidłowy iloczzyn w1 i w3" }
+    val iloczyn2 = w1.mnozenie(w2)
+    require(iloczyn2.toString() == "W(x) = 4.0x^3 + 11.0x^2 + 8.0x + 4.0") { "Nieprawidłowy iloczzyn w1 i w2" }
+
+    val w1Plus = w1.plusEquals(w2)
+    require(w1Plus.toString() == "W(x) = 4.0x^2 + 4.0x + 4.0") { "Nieprawidłowy wynik w += dla w1 i w2" }
+    require(w1.toString() == "W(x) = 4.0x^2 + 3.0x + 2.0") { "Nieprawidłowy wynik plusEquals w1 i w2" }
+
+    val w1Minus = w1.minusEquals(w2)
+    require(w1Minus.toString() == "W(x) = 4.0x^2 + 2.0x") { "Nieprawidłowy wynik w -= dla w1 i w2" }
+    require(w1.toString() == "W(x) = 4.0x^2 + 3.0x + 2.0") { "Nieprawidłowy wynik minusEquals w1 i w2" }
+
+    val w1Times = w1.timesEquals(w2)
+    require(w1Times.toString() == "W(x) = 4.0x^3 + 11.0x^2 + 8.0x + 4.0") { "Nieprawidłowy wynik w -= dla w1 i w2" }
+    require(w1.toString() == "W(x) = 4.0x^2 + 3.0x + 2.0") { "Nieprawidłowy wynik timesEquals w1 i w2" }
+}
+
+fun main() {
+    testWielomian()
+}
